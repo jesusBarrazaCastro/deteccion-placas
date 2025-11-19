@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # 1. Servicio de la Base de Datos PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    restart: always
+    environment:
+      # Variables de entorno CRÍTICAS para la BD (seguras en el repo público)
+      POSTGRES_USER: user_placa
+      POSTGRES_PASSWORD: password_segura
+      POSTGRES_DB: sistema_matriculas
+    volumes:
+      # Persistencia de datos en la carpeta 'data/postgres' de tu host
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - proyecto-net
+    ports:
+      - "5432:5432"
+
+  # 2. Servicio del Backend (FastAPI con CV)
+  backend:
+    # Le indica a Docker que busque el Dockerfile en la carpeta 'backend/'
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fastapi_backend
+    restart: always
+    ports:
+      # Mapea el puerto de la API al puerto 8000 de tu máquina local
+      - "8000:8000"
+    depends_on:
+      - db # Asegura que la BD se inicie primero
+    environment:
+      # Variables de conexión que el backend usará.
+      # ¡DB_HOST debe ser el nombre del servicio de la BD, que es 'db'!
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: sistema_matriculas
+      DB_USER: user_placa
+      DB_PASSWORD: password_segura
+    networks:
+      - proyecto-net
+    volumes:
+      # Monta el código fuente. Esto es VITAL para el desarrollo local:
+      # Cualquier cambio que hagas en backend/app/ se reflejará instantáneamente en el contenedor.
+      - ./backend/app:/app/app
+
+# 3. Red de Comunicación
+networks:
+  proyecto-net:
+    driver: bridge
