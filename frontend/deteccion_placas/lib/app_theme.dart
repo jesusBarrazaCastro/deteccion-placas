@@ -97,7 +97,7 @@ class AppTheme extends ThemeExtension<AppTheme> {
 
   // --- Presets ---
   static AppTheme light = AppTheme(
-    primary: Colors.indigo,
+    primary: Colors.deepPurple,
     secondary: Colors.blueGrey,
     background: Colors.white,
     surface: Colors.grey[100]!,
@@ -114,7 +114,7 @@ class AppTheme extends ThemeExtension<AppTheme> {
   );
 
   static AppTheme dark = AppTheme(
-    primary: Colors.indigo,
+    primary: Colors.deepPurple,
     secondary: Colors.teal,
     background: Colors.black,
     surface: Colors.grey[850]!,
