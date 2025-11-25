@@ -14,7 +14,6 @@ import threading
 
 # Importamos las librerías para el LPR
 import easyocr
-import numpy as np 
 
 # --- 1. Inicialización Global del Modelo ---
 reader = None
