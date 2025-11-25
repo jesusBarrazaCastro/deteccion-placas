@@ -1,5 +1,10 @@
 # Contenido de backend/requirements.txt
 fastapi
 uvicorn[standard]
+pydantic
 psycopg2-binary
-opencv-python
+Pillow
+numpy
+easyocr
+python-multipart
+opencv-python-headless  # Agregar esta línea

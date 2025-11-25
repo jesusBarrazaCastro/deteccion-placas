@@ -9,7 +9,9 @@ RUN apt-get update && \
     build-essential \
     libpq-dev \
     libgl1-mesa-glx \
-    libgomp1 && \
+    libgomp1 \
+    libsm6 \
+    libxext6 && \
     rm -rf /var/lib/apt/lists/*
 
 # 3. DIRECTORIO DE TRABAJO
