@@ -11,6 +11,7 @@ import numpy as np
 import traceback
 from typing import List, Dict, Any
 import threading
+from fastapi.middleware.cors import CORSMiddleware  # <-- AGREGAR este import
 
 # Importamos las librerías para el LPR
 import easyocr
@@ -51,6 +52,40 @@ class PlateDetectionResponse(BaseModel):
 # --- 4. Inicialización de la Aplicación ---
 
 app = FastAPI(title="Servicio de Consulta de Vehículos con LPR (EasyOCR)")
+
+from fastapi.middleware.cors import CORSMiddleware
+
+# --- Configuración CORS para ngrok y Flutter ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost",
+        "http://localhost:3000", 
+        "http://localhost:5000",
+        "http://127.0.0.1",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5000",
+        # Para desarrollo móvil (Flutter web)
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        # Para Android emulator
+        "http://10.0.2.2:8000",
+        # Para dispositivos físicos en misma red
+        "http://192.168.1.*:8000",
+        "http://192.168.0.*:8000",
+        # Para ngrok - DOMINIOS DINÁMICOS
+        "https://*.ngrok.io",           # Permite cualquier subdominio ngrok
+        "https://*.ngrok-free.app",     # Para ngrok free tier
+        "http://*.ngrok.io",            # HTTP también
+        "http://*.ngrok-free.app",
+        # Agrega también esto para mayor flexibilidad
+        "*"                             # ⚠️ SOLO para desarrollo/testing
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"]
+)
 
 # --- 5. Función de Conexión a la BD ---
 
@@ -351,24 +386,25 @@ def detect_license_plate(image_bytes: bytes) -> str:
 
 # --- 7. Lógica de Consulta a BD ---
 
-def query_db_with_sp(AC: str, placa: str) -> list[dict]:
+def query_db_with_sp(sp_name: str, data: dict) -> list[dict]:
     """
-    Llama a la función de base de datos 'read_vehiculos' con los parámetros dados.
+    Llama a la función de base de datos con el nombre del SP y los datos proporcionados.
     """
     conn = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
 
-        sp_name = "read_vehiculos"
-        
-        # Crear el payload JSON que espera el SP
-        input_data = SPInput(AC=AC, placa=placa)
-        json_payload = input_data.model_dump_json()
+        # Crear el payload JSON con todos los datos
+        json_payload = json.dumps(data)
 
         # Llamar a la Función SQL
         query = f"SELECT * FROM {sp_name}(%s::jsonb)"
         cur.execute(query, (json_payload,))
+        
+        # HACER COMMIT EXPLÍCITO para operaciones de escritura
+        if sp_name in ['write_log', 'save_log']:  # Agrega aquí otros SPs de escritura
+            conn.commit()
         
         result_row = cur.fetchone()
 
@@ -384,7 +420,10 @@ def query_db_with_sp(AC: str, placa: str) -> list[dict]:
         return db_response
 
     except Exception as e:
-        print(f"Error al llamar a la función de BD: {e}")
+        # Si hay error, hacer rollback
+        if conn:
+            conn.rollback()
+        print(f"Error al llamar a la función de BD {sp_name}: {e}")
         raise HTTPException(status_code=500, detail=f"Error al consultar la BD: {e}")
     finally:
         if conn:
@@ -398,19 +437,51 @@ def read_root():
     status = "loading" if not models_loaded else "ready"
     return {
         "status": "Backend is running!", 
-        "version": "1.7 (EasyOCR Mejorado - Sin Guiones)",
+        "version": "1.8 (EasyOCR Mejorado - SP Dinámico)",
         "models_status": status,
         "models_loaded": models_loaded,
         "loading_error": loading_error
     }
 
 @app.post("/api/vehiculos/read/", response_model=list[dict], summary="Consulta vehículos usando JSON y SP")
-def read_vehiculos_api(input_data: SPInput):
+def read_vehiculos_api(data: dict):
     """
     Recibe un JSON con 'AC' y 'placa', llama al SP 'read_vehiculos'
     y devuelve el array JSON de resultados.
     """
-    return query_db_with_sp(AC=input_data.AC, placa=input_data.placa)
+    return query_db_with_sp(sp_name="read_vehiculos", data=data)
+
+@app.post("/api/logs/write/", response_model=dict, summary="Escribe un log en la base de datos")
+def write_log_api(data: dict):
+    """
+    Recibe un JSON con datos para el log, llama al SP 'write_log'
+    y devuelve el resultado de la operación.
+    """
+    try:
+        result = query_db_with_sp(sp_name="write_log", data=data)
+        return {
+            "status": "success",
+            "message": "Log escrito correctamente",
+            "data": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al escribir log: {e}")
+
+# Endpoint adicional para llamar cualquier SP genérico
+@app.post("/api/execute-sp/{sp_name}", response_model=dict, summary="Ejecuta cualquier stored procedure")
+def execute_sp(sp_name: str, data: dict):
+    """
+    Ejecuta cualquier stored procedure con los parámetros dados.
+    """
+    try:
+        result = query_db_with_sp(sp_name=sp_name, data=data)
+        return {
+            "status": "success",
+            "stored_procedure": sp_name,
+            "data": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al ejecutar {sp_name}: {e}")
 
 @app.post("/api/vehiculos/detect-plate/", response_model=PlateDetectionResponse, summary="Detecta placa de una imagen y consulta BD")
 async def detect_plate_and_lookup(
@@ -442,9 +513,17 @@ async def detect_plate_and_lookup(
         print(f"Tiempo de detección: {detection_time:.2f}s")
         print(f"Placa detectada: {placa_detectada}")
 
-        # Consulta a BD
+        # Consulta a BD usando read_vehiculos_api
         print(f"🗄️  Consultando BD con placa: {placa_detectada}")
-        vehiculos_data = query_db_with_sp(AC=AC_type, placa=placa_detectada)
+        
+        # Crear el data dict para pasar a read_vehiculos_api
+        data = {
+            "AC": AC_type,
+            "placa": placa_detectada
+        }
+        
+        # Llamar al endpoint read_vehiculos_api
+        vehiculos_data = read_vehiculos_api(data)
         
         print(f"Resultados BD: {len(vehiculos_data)} registros")
         
