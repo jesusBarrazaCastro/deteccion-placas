@@ -8,8 +8,9 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart'; // Importante para definir el tipo de contenido
 
-// Asegúrate de que este archivo exista en tu proyecto.
-import 'api_service.dart'; // Contiene la clase ApiService con el getter baseUrl
+// Importaciones adicionales
+import 'api_service.dart';
+import 'logs_list.dart'; // Contiene la clase ApiService con el getter baseUrl
 
 void main() {
   runApp(const MyApp());
@@ -49,10 +50,15 @@ class _MyHomePageState extends State<MyHomePage> {
   // --- VARIABLES DE ESTADO ---
   final ApiService _apiService = ApiService();
   String _estado = 'Iniciando...';
-  bool _conexionExitosa = false;
+  // bool _conexionExitosa = false; // Variable no usada, se eliminó
 
   bool _isLoading = true;
+  int _selectedIndex = 0; // Índice para el BottomNavigationBar
 
+  // Lista para guardar todos los logs
+  List<dynamic> _allLogs = [];
+
+  // Lista para mostrar solo los 4 logs más recientes en la pantalla principal
   List<dynamic> _recentLogs = List.generate(
       4,
           (index) => {
@@ -104,7 +110,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // --- MÉTODOS DE API ---
 
-  // Método existente para leer logs (usa _apiService.post - JSON)
+  // Método existente para leer logs (ahora guarda la lista completa y los 4 recientes)
   Future<void> _readRecentLogs() async {
     setState(() {
       _isLoading = true;
@@ -118,24 +124,38 @@ class _MyHomePageState extends State<MyHomePage> {
       );
 
       if (response != null && response is List && response.isNotEmpty) {
-        _totalRegisters = response.length.toString();
-        _todayDetections = response.where((log) => log['fecha_scan']?.contains(DateTime.now().year.toString()) ?? false).length.toString();
+        // 1. Guardar TODOS los logs
+        _allLogs = response;
 
-        _recentLogs = response;
+        // 2. Calcular contadores
+        _totalRegisters = _allLogs.length.toString();
+        // Filtrar por logs de hoy. Esto requiere que 'fecha_scan' sea un timestamp válido
+        final today = DateTime.now().toIso8601String().substring(0, 10);
+        _todayDetections = _allLogs.where((log) => log['fecha_scan']?.toString().startsWith(today) ?? false).length.toString();
 
-        if(_recentLogs.length > 4){
-          _recentLogs = _recentLogs.take(4).toList();
+
+        // 3. Obtener los 4 logs más recientes (usando .take(4).toList())
+        _recentLogs = _allLogs.take(4).toList();
+
+        // Rellenar con placeholders si hay menos de 4 logs para evitar errores de renderizado
+        while (_recentLogs.length < 4) {
+          _recentLogs.add({'id': 0, 'placa': '---', 'fecha_scan': '---', 'estado': 'N/A'});
         }
 
+
         setState(() {
-          _estado = '✅ Consulta exitosa: ${_recentLogs.length} logs cargados.';
+          _estado = '✅ Consulta exitosa: ${_allLogs.length} logs totales cargados.';
         });
       } else {
+        // En caso de respuesta vacía, resetear ambas listas
+        _allLogs = [];
+        _recentLogs = List.generate(4, (index) => {'id': 0, 'placa': '---', 'fecha_scan': '---', 'estado': 'N/A'});
         throw Exception('Respuesta de API vacía o inválida.');
       }
     } catch (e) {
       setState(() {
-        _recentLogs = List.generate(4, (index) => {'placa': 'ERROR', 'fecha_scan': 'ERROR', 'estado': 'error'});
+        _allLogs = [];
+        _recentLogs = List.generate(4, (index) => {'id': 0, 'placa': 'ERROR', 'fecha_scan': 'ERROR', 'estado': 'error'});
         _totalRegisters = '---';
         _todayDetections = '---';
         _estado = '❌ Error al cargar datos: $e';
@@ -146,6 +166,48 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }
   }
+
+  // --- Métodos de Navegación ---
+
+  void _openLogsListScreen() {
+    // 1. Deseleccionar el BottomNavigationBar temporalmente (opcional, pero mejora UX)
+    setState(() {
+      _selectedIndex = 0;
+    });
+
+    // 2. Navegar a la pantalla de la lista de logs, pasando la lista completa
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LogsListScreen(
+          logs: _allLogs,
+          onLogTap: _openManualResultScreen,
+        ),
+      ),
+    ).then((_) {
+      // 3. Al regresar, forzamos la recarga de logs (para ver el log recién escaneado)
+      _readRecentLogs();
+    });
+  }
+
+  _openManualResultScreen(Map<String, dynamic> responseData) {
+    // Crear el objeto VehiculoData (asumiendo que responseData tiene el formato correcto)
+    final vehiculoData = VehiculoData.fromJson(responseData);
+
+    // Navegar a la pantalla de resultados
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetectionResultScreen(
+          data: vehiculoData,
+        ),
+      ),
+    ).then((_) {
+      // Al cerrar la pantalla de resultado, recargar los logs.
+      _readRecentLogs();
+    });
+  }
+
 
   // --- MÉTODOS DE DETECCIÓN DE PLACA (USANDO MULTIPART) ---
 
@@ -215,8 +277,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
       // Leer los bytes del archivo (compatible con Web y Móvil)
       final bytes = await imageFile.readAsBytes();
-
-      // --- FIX APLICADO AQUÍ ---
       final mimeTypeString = _getMimeTypeFromFileName(imageFile.name);
 
       // Crear el MultipartFile usando los bytes y el ContentType explícito
@@ -227,14 +287,13 @@ class _MyHomePageState extends State<MyHomePage> {
         // Usar MediaType para asegurar que el Content-Type se envíe correctamente
         contentType: MediaType.parse(mimeTypeString),
       ));
-      // --- FIN DEL FIX ---
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final responseData = json.decode(utf8.decode(response.bodyBytes));
-        final placa = responseData['placa_detectada'] ?? 'PLACA NO ENCONTRADA';
+        // final placa = responseData['placa_detectada'] ?? 'PLACA NO ENCONTRADA'; // Variable no usada
 
         if(responseData['placa_detectada'] == 'AC001'){
           ConfirmDialog.error(
@@ -244,10 +303,14 @@ class _MyHomePageState extends State<MyHomePage> {
           );
           return;
         }
-        dynamic vehiculoData = responseData['vehiculos_data'][0]; //GUARDAR EN UNA VARIABLE LOS DATOS RECIBIDOS DEL VEHICULO
-        await _saveScanLog(vehiculoId: vehiculoData['id']); //GUARDAR EN LOS LOGS DE SCANEO
-        _openManualResultScreen(responseData: vehiculoData);//DESPLEGAR LOS RESULTADOS DE LA BUSQUEDA
-        setState(() {});
+        dynamic vehiculoData = responseData['vehiculos_data'][0];
+        await _saveScanLog(vehiculoId: vehiculoData['id']);
+
+        setState(() {
+          _placaDetectada = vehiculoData['placa'];
+        });
+
+        _openManualResultScreen(vehiculoData); //DESPLEGAR LOS RESULTADOS DE LA BUSQUEDA
 
       } else {
         final errorBody = json.decode(utf8.decode(response.bodyBytes));
@@ -261,55 +324,38 @@ class _MyHomePageState extends State<MyHomePage> {
           message: e.toString()
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      // La recarga de logs se hace en _openManualResultScreen.then()
+      // Solo desactivamos el loading si NO navegamos a otra pantalla
+      if (ModalRoute.of(context)?.isCurrent ?? true) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _saveScanLog({required int vehiculoId}) async {
-    setState(() {
-      _isLoading = true;
-    });
-
+    // No cambiamos el estado _isLoading aquí para no interrumpir el flujo visual
+    // mientras se muestra la pantalla de resultados.
     try {
       final response = await _apiService.post(
           '/api/logs/write/',
           {'AC': 'save_log', 'vehiculo_id': vehiculoId}
       );
 
-      if (response != null && response is List && response.isNotEmpty) {
-
+      if (response != null && response is Map && response['status'] == 'ok') {
+        // Opcional: Notificación de que el log se guardó
+        // MsgtUtil.showSuccess(context, 'Registro de log guardado.');
       } else {
-        throw Exception('Respuesta de API vacía o inválida.');
+        throw Exception('Respuesta de API inválida al guardar el log.');
       }
     } catch (e) {
-        MsgtUtil.showError(context, 'Error al guardar el log: ${e.toString()}');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      MsgtUtil.showError(context, 'Error al guardar el log: ${e.toString()}');
     }
   }
 
-  void _openManualResultScreen({required Map<String, dynamic> responseData}) {
-    // Crear el objeto VehiculoData
-    final vehiculoData = VehiculoData.fromJson(responseData);
 
-    // Navegar a la pantalla de resultados
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DetectionResultScreen(
-          data: vehiculoData,
-        ),
-      ),
-    );
-
-  }
-
-
-  // --- WIDGETS AUXILIARES (Skeleton, Card, Record) (Sin Cambios) ---
+  // --- WIDGETS AUXILIARES (Skeleton, Card, Record) ---
 
   Widget _buildSkeleton({required double height, double width = double.infinity, double radius = 8.0}) {
     return Container(
@@ -438,19 +484,23 @@ class _MyHomePageState extends State<MyHomePage> {
       );
     }
 
-    Color rowBgColor = Colors.white;
+    // No se usa rowBgColor = Colors.white;
 
     return InkWell(
       onTap: () {
-        _openManualResultScreen(responseData: data);
+        // Al tocar un registro reciente, mostramos su detalle
+        _openManualResultScreen(data);
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: Container(
           padding: const EdgeInsets.all(12.0),
           decoration: BoxDecoration(
-            //color: rowBgColor,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))
+            ],
           ),
           child: Row(
             children: [
@@ -483,6 +533,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   ],
                 ),
               ),
+              Icon(Icons.chevron_right, color: primaryColor),
             ],
           ),
         ),
@@ -496,6 +547,90 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
     final secondaryColor = Colors.grey.shade700;
+
+    // El cuerpo de la aplicación
+    final Widget homeBody = Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const SizedBox(height: 10),
+
+          // --- Tarjetas de Contadores ---
+          Row(
+            children: [
+              Expanded(
+                child: _buildCounterCard(
+                  context,
+                  icon: Icons.description,
+                  count: _totalRegisters,
+                  label: 'Registros totales',
+                  backgroundColor: const Color(0xFFE3F2FD),
+                  iconColor: primaryColor,
+                ),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: _buildCounterCard(
+                  context,
+                  icon: Icons.calendar_today,
+                  count: _todayDetections,
+                  label: 'Hoy detectadas',
+                  backgroundColor: const Color(0xFFE8F5E9),
+                  iconColor: Colors.green.shade700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 30),
+
+          // --- Encabezado 'Recientes' ---
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recientes',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                // CONEXIÓN DEL BOTÓN "Ver todo"
+                onPressed: _openLogsListScreen,
+                child: Text(
+                  'Ver todo',
+                  style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // --- Lista de 4 Registros Recientes ---
+          ..._recentLogs.map((log) => _buildRecentRecord(data: log)).toList(),
+
+          const SizedBox(height: 40),
+
+          // --- Botones de Acción Apilados (Seleccionar Imagen - Arriba) ---
+          _buildActionButton(
+            label: 'Seleccionar Imagen',
+            icon: Icons.photo_library,
+            color: secondaryColor,
+            onPressed: _selectImageAndCallAPI, // Conectado al método de detección
+          ),
+          const SizedBox(height: 10),
+
+          // --- Botones de Acción Apilados (Escanear Placa - Abajo) ---
+          Expanded(
+            child: _buildActionButton(
+              label: 'Escanear Placa',
+              icon: Icons.camera_alt,
+              color: primaryColor,
+              onPressed: _captureImageAndCallAPI,
+            ),
+          ),
+
+        ],
+      ),
+    );
 
     return Scaffold(
       // --- 1. AppBar ---
@@ -535,94 +670,25 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
 
-      // --- 2. Body (SingleChildScrollView con Column) ---
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const SizedBox(height: 10),
-
-            // --- Tarjetas de Contadores ---
-            Row(
-              children: [
-                Expanded(
-                  child: _buildCounterCard(
-                    context,
-                    icon: Icons.description,
-                    count: _totalRegisters,
-                    label: 'Registros totales',
-                    backgroundColor: const Color(0xFFE3F2FD),
-                    iconColor: primaryColor,
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: _buildCounterCard(
-                    context,
-                    icon: Icons.calendar_today,
-                    count: _todayDetections,
-                    label: 'Hoy detectadas',
-                    backgroundColor: const Color(0xFFE8F5E9),
-                    iconColor: Colors.green.shade700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 30),
-
-            // --- Encabezado 'Recientes' ---
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Recientes',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                TextButton(
-                  onPressed: () { /* Acción de ver todo */ },
-                  child: Text(
-                    'Ver todo',
-                    style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-
-            // --- Lista de 4 Registros Recientes ---
-            ..._recentLogs.map((log) => _buildRecentRecord(data: log)).toList(),
-
-            const SizedBox(height: 40),
-
-            // --- Botones de Acción Apilados (Seleccionar Imagen - Arriba) ---
-            _buildActionButton(
-              label: 'Seleccionar Imagen',
-              icon: Icons.photo_library,
-              color: secondaryColor,
-              onPressed: _selectImageAndCallAPI, // Conectado al método de detección
-            ),
-            const SizedBox(height: 10),
-
-            // --- Botones de Acción Apilados (Escanear Placa - Abajo) ---
-            Expanded(
-              child: _buildActionButton(
-                label: 'Escanear Placa',
-                icon: Icons.camera_alt,
-                color: primaryColor,
-                onPressed: _captureImageAndCallAPI,
-              ),
-            ),
-          ],
-        ),
-      ),
+      // --- 2. Body (Muestra la pantalla de inicio) ---
+      body: homeBody,
 
       // --- 3. Barra de Navegación Inferior ---
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
-        currentIndex: 0,
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          if (index == 1) {
+            // CONEXIÓN DEL ITEM 'Historial'
+            _openLogsListScreen();
+          } else {
+            setState(() {
+              _selectedIndex = index;
+            });
+          }
+        },
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
