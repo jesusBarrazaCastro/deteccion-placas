@@ -1,3 +1,6 @@
+import 'package:deteccion_placas/utilities/confirm_dialog_util.dart';
+import 'package:deteccion_placas/utilities/msg_util.dart';
+import 'package:deteccion_placas/vehiculo_data.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -50,13 +53,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool _isLoading = true;
 
-  List<Map<String, String>> _recentLogs = List.generate(
+  List<dynamic> _recentLogs = List.generate(
       4,
           (index) => {
+        'id': 0,
         'placa': 'Cargando...',
         'fecha_scan': 'Cargando...',
         'estado': 'ok',
-      });
+      }
+  );
 
   String _totalRegisters = '...';
   String _todayDetections = '...';
@@ -116,14 +121,10 @@ class _MyHomePageState extends State<MyHomePage> {
         _totalRegisters = response.length.toString();
         _todayDetections = response.where((log) => log['fecha_scan']?.contains(DateTime.now().year.toString()) ?? false).length.toString();
 
-        _recentLogs = response.take(4).map<Map<String, String>>((item) => {
-          'placa': item['placa'] ?? 'N/A',
-          'fecha_scan': item['fecha_scan'] ?? 'N/A',
-          'estado': item['estado'] ?? 'ok',
-        }).toList();
+        _recentLogs = response;
 
-        while (_recentLogs.length < 4) {
-          _recentLogs.add({'placa': '---', 'fecha_scan': '---', 'estado': 'N/A'});
+        if(_recentLogs.length > 4){
+          _recentLogs = _recentLogs.take(4).toList();
         }
 
         setState(() {
@@ -160,7 +161,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (image != null) {
       try {
         // El tipo de acción AC_type para la cámara
-        const String acType = "DETECCION_CAMARA";
+        const String acType = "by_id";
 
         // Reutilizar el método de envío a la API
         await _callPlateDetectionAPI(image, acType);
@@ -185,7 +186,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (image != null) {
       try {
-        const String acType = "DETECCION_GALERIA";
+        const String acType = "by_id";
         await _callPlateDetectionAPI(image, acType);
 
       } catch (e) {
@@ -199,7 +200,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // 2. Método que llama al endpoint de detección (FIXED: Añadido contentType)
   Future<void> _callPlateDetectionAPI(XFile imageFile, String acType) async {
     setState(() {
       _isLoading = true;
@@ -236,10 +236,18 @@ class _MyHomePageState extends State<MyHomePage> {
         final responseData = json.decode(utf8.decode(response.bodyBytes));
         final placa = responseData['placa_detectada'] ?? 'PLACA NO ENCONTRADA';
 
-        setState(() {
-          _placaDetectada = placa;
-          _estado = '✅ Detección completada. Placa: $placa';
-        });
+        if(responseData['placa_detectada'] == 'AC001'){
+          ConfirmDialog.error(
+              context,
+              title: 'No se pudo detectar la placa',
+              message: 'Intente de nuevo'
+          );
+          return;
+        }
+        dynamic vehiculoData = responseData['vehiculos_data'][0]; //GUARDAR EN UNA VARIABLE LOS DATOS RECIBIDOS DEL VEHICULO
+        await _saveScanLog(vehiculoId: vehiculoData['id']); //GUARDAR EN LOS LOGS DE SCANEO
+        _openManualResultScreen(responseData: vehiculoData);//DESPLEGAR LOS RESULTADOS DE LA BUSQUEDA
+        setState(() {});
 
       } else {
         final errorBody = json.decode(utf8.decode(response.bodyBytes));
@@ -247,16 +255,57 @@ class _MyHomePageState extends State<MyHomePage> {
         throw Exception('Fallo la detección (${response.statusCode}): $errorDetail');
       }
     } catch (e) {
-      setState(() {
-        _placaDetectada = 'Error: ${e.toString()}';
-        _estado = '❌ Error de API: ${e.toString()}';
-      });
-      rethrow;
+      ConfirmDialog.error(
+          context,
+          title: 'Error al detectar la placa',
+          message: e.toString()
+      );
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _saveScanLog({required int vehiculoId}) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await _apiService.post(
+          '/api/logs/write/',
+          {'AC': 'save_log', 'vehiculo_id': vehiculoId}
+      );
+
+      if (response != null && response is List && response.isNotEmpty) {
+
+      } else {
+        throw Exception('Respuesta de API vacía o inválida.');
+      }
+    } catch (e) {
+        MsgtUtil.showError(context, 'Error al guardar el log: ${e.toString()}');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _openManualResultScreen({required Map<String, dynamic> responseData}) {
+    // Crear el objeto VehiculoData
+    final vehiculoData = VehiculoData.fromJson(responseData);
+
+    // Navegar a la pantalla de resultados
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetectionResultScreen(
+          data: vehiculoData,
+        ),
+      ),
+    );
+
   }
 
 
@@ -358,11 +407,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _buildRecentRecord({
-    required String placa,
-    required String time,
-    required String estado,
-  }) {
+  Widget _buildRecentRecord({dynamic data}) {
     final primaryColor = Theme.of(context).primaryColor;
     final iconBgColor = primaryColor.withOpacity(0.1);
 
@@ -395,53 +440,51 @@ class _MyHomePageState extends State<MyHomePage> {
 
     Color rowBgColor = Colors.white;
 
-    if (estado == 'warning') {
-      rowBgColor = Colors.orange.shade100.withOpacity(0.4);
-    } else if (estado == 'error') {
-      rowBgColor = Colors.red.shade100.withOpacity(0.4);
-    }
-
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Container(
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: rowBgColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: iconBgColor,
-                borderRadius: BorderRadius.circular(8),
+    return InkWell(
+      onTap: () {
+        _openManualResultScreen(responseData: data);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Container(
+          padding: const EdgeInsets.all(12.0),
+          decoration: BoxDecoration(
+            //color: rowBgColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.directions_car, color: primaryColor, size: 24),
               ),
-              child: Icon(Icons.directions_car, color: primaryColor, size: 24),
-            ),
-            const SizedBox(width: 15),
+              const SizedBox(width: 15),
 
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    placa,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data['placa']??'N/A',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    time,
-                    style: const TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatTimestamp(data['fecha_scan'])??'N/A',
+                      style: const TextStyle(color: Colors.grey, fontSize: 14),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -493,7 +536,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
 
       // --- 2. Body (SingleChildScrollView con Column) ---
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -548,11 +591,7 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(height: 10),
 
             // --- Lista de 4 Registros Recientes ---
-            ..._recentLogs.map((log) => _buildRecentRecord(
-              placa: log['placa']!,
-              time: _formatTimestamp(log['fecha_scan']!),
-              estado: log['estado']!,
-            )).toList(),
+            ..._recentLogs.map((log) => _buildRecentRecord(data: log)).toList(),
 
             const SizedBox(height: 40),
 
@@ -566,23 +605,13 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(height: 10),
 
             // --- Botones de Acción Apilados (Escanear Placa - Abajo) ---
-            _buildActionButton(
-              label: 'Escanear Placa',
-              icon: Icons.camera_alt,
-              color: primaryColor,
-              onPressed: _captureImageAndCallAPI,
-            ),
-            const SizedBox(height: 20),
-
-            // --- Feedback de Detección ---
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10.0),
-              child: Text('Resultado de la detección: $_placaDetectada', style: const TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            // --- Feedback de Estado General ---
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10.0),
-              child: Text('Estado de la App: $_estado', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Expanded(
+              child: _buildActionButton(
+                label: 'Escanear Placa',
+                icon: Icons.camera_alt,
+                color: primaryColor,
+                onPressed: _captureImageAndCallAPI,
+              ),
             ),
           ],
         ),
