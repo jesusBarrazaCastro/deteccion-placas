@@ -1,15 +1,17 @@
 buildscript {
-    ext.kotlin_version = '1.7.10'
+    ext.kotlin_version = '1.9.24' // Versión de Kotlin estable y compatible para AGP 8.x
     repositories {
         google()
         mavenCentral()
     }
-
     dependencies {
+        // Plugin de Android para Gradle (AGP) - Versión compatible con Gradle 8.x/Java 21
+        classpath 'com.android.tools.build:gradle:8.3.2'
+        
+        // Kotlin Gradle Plugin
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
-
 allprojects {
     repositories {
         google()
