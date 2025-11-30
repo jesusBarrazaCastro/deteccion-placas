@@ -1,8 +1,13 @@
+import 'package:deteccion_placas/utilities/msg_util.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'incidencia.dart';
+// Importamos la pantalla de formulario de incidencia para la navegación
+
 // Definición de la estructura de datos del vehículo para la pantalla
 class VehiculoData {
+  final int vehiculoId;
   final String placa;
   final String nombreCompleto;
   final String personaTipo;
@@ -27,6 +32,7 @@ class VehiculoData {
     required this.color,
     required this.sexo,
     required this.ano,
+    required this.vehiculoId,
   });
 
   // Constructor factory para parsear el mapa de respuesta de la API
@@ -35,6 +41,7 @@ class VehiculoData {
     final String anoStr = json['ano']?.toString() ?? 'No especificado';
 
     return VehiculoData(
+      vehiculoId: json['id']??0,
       placa: json['placa'] ?? 'N/A',
       nombreCompleto: json['nombre_completo'] ?? 'N/A',
       personaTipo: json['persona_tipo'] ?? 'N/A',
@@ -47,6 +54,24 @@ class VehiculoData {
       sexo: json['sexo'] ?? 'N/A',
       ano: anoStr,
     );
+  }
+
+  // Método para convertir la clase de vuelta a un mapa JSON para la incidencia
+  Map<String, dynamic> toJson() {
+    return {
+      'id': vehiculoId,
+      'placa': placa,
+      'nombreCompleto': nombreCompleto,
+      'personaTipo': personaTipo,
+      'personaEstado': personaEstado,
+      'correo': correo,
+      'numTelefono': numTelefono,
+      'marca': marca,
+      'modelo': modelo,
+      'color': color,
+      'sexo': sexo,
+      'ano': ano,
+    };
   }
 }
 
@@ -68,10 +93,31 @@ class DetectionResultScreen extends StatefulWidget {
 
 class _DetectionResultScreenState extends State<DetectionResultScreen> {
 
-  // Constantes de color movidas al State
+  // Constantes de color
   final Color primaryColor = const Color(0xFF0D47A1); // Azul oscuro
   final Color successColor = const Color(0xFF10B981); // Esmeralda
   final Color accentColor = const Color(0xFF4F46E5); // Indigo
+
+  // Función para manejar la navegación a la pantalla de registro de incidencia
+  void _navigateToIncidentForm() async {
+    // Convertir el objeto VehiculoData a un Map<String, dynamic> (JSON)
+    final vehicleJsonData = widget.data.toJson();
+
+    // Navegar y esperar el resultado (los datos de la incidencia registrada)
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => IncidentFormScreen(
+          vehicleJsonData: vehicleJsonData, // Pasamos el mapa
+        ),
+      ),
+    );
+
+    if (result != null && result  == true) {
+      MsgtUtil.showSuccess(context, 'Se ha registrado la incidencia correctamente');
+    }
+
+  }
 
   // --- WIDGET PRINCIPAL BUILD ---
 
@@ -82,7 +128,7 @@ class _DetectionResultScreenState extends State<DetectionResultScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: successColor, // Color de éxito
+        backgroundColor: successColor,
         elevation: 0,
         title: const Text('Resultado de Escaneo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
         centerTitle: true,
@@ -92,7 +138,7 @@ class _DetectionResultScreenState extends State<DetectionResultScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 100), // Espacio para el botón fijo
+        padding: const EdgeInsets.only(bottom: 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -201,7 +247,7 @@ class _DetectionResultScreenState extends State<DetectionResultScreen> {
         ),
       ),
 
-      // --- 4. Botón de Acción Crítica (Simulación de Incidencia Manual) ---
+      // --- 4. Botón de Acción Crítica (Crear Incidencia) ---
       bottomSheet: Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
@@ -211,15 +257,7 @@ class _DetectionResultScreenState extends State<DetectionResultScreen> {
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () {
-              // Simular la acción de crear una incidencia.
-              // Aquí se podría implementar la lógica de setState() o una llamada a API
-              // cuando la funcionalidad esté lista.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Simulando la creación de una Incidencia Manual.')),
-              );
-              Navigator.pop(context); // Volver a la pantalla principal
-            },
+            onPressed: _navigateToIncidentForm, // Llama a la función de navegación
             icon: const Icon(Icons.warning_amber_rounded, size: 24),
             label: const Text(
               'Crear Incidencia',
@@ -238,7 +276,7 @@ class _DetectionResultScreenState extends State<DetectionResultScreen> {
     );
   }
 
-  // --- WIDGETS AUXILIARES (Movidos al State) ---
+  // --- WIDGETS AUXILIARES ---
 
   Widget _buildDataCard(
       BuildContext context, {

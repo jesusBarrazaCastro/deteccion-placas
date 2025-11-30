@@ -30,11 +30,6 @@ class LogsListScreen extends StatelessWidget {
     final primaryColor = Theme.of(context).primaryColor;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Historial de Detecciones'),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-      ),
       body: logs.isEmpty
           ? Center(
         child: Column(
@@ -49,24 +44,38 @@ class LogsListScreen extends StatelessWidget {
           ],
         ),
       )
-          : ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        // Mostramos la lista completa de logs
-        itemCount: logs.length,
-        itemBuilder: (context, index) {
-          final log = logs[index];
+          : Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                child: Text(
+                  'Listado de escaneos recientes',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                        padding: const EdgeInsets.all(16.0),
+                        // Mostramos la lista completa de logs
+                        itemCount: logs.length,
+                        itemBuilder: (context, index) {
+                final log = logs[index];
 
-          // Usamos un widget similar al de la pantalla principal
-          return _buildListRecord(
-              context,
-              data: log,
-              onTap: () {
-                // Al tocar, navegamos a la pantalla de detalle
-                onLogTap(log);
-              }
-          );
-        },
-      ),
+                // Usamos un widget similar al de la pantalla principal
+                return _buildListRecord(
+                    context,
+                    data: log,
+                    onTap: () {
+                      // Al tocar, navegamos a la pantalla de detalle
+                      onLogTap(log);
+                    }
+                );
+                        },
+                      ),
+              ),
+            ],
+          ),
     );
   }
 

@@ -11,9 +11,9 @@ import numpy as np
 import traceback
 from typing import List, Dict, Any
 import threading
-from fastapi.middleware.cors import CORSMiddleware  # <-- AGREGAR este import
+from fastapi.middleware.cors import CORSMiddleware 
 
-# Importamos las librerías para el LPR
+# Importamos las librerías para el OCR
 import easyocr
 
 # --- 1. Inicialización Global del Modelo ---
@@ -22,7 +22,7 @@ models_loaded = False
 loading_error = None
 
 def initialize_easyocr():
-    """Inicializa EasyOCR en un hilo separado para evitar bloqueos"""
+    """Inicializamos EasyOCR en un hilo separado para evitar bloqueos"""
     global reader, models_loaded, loading_error
     
     try:
@@ -37,8 +37,6 @@ def initialize_easyocr():
 loading_thread = threading.Thread(target=initialize_easyocr, daemon=True)
 loading_thread.start()
 
-# --- 2. Definición del Esquema de Entrada (Pydantic) ---
-
 class SPInput(BaseModel):
     AC: str
     placa: str
@@ -49,9 +47,9 @@ class PlateDetectionResponse(BaseModel):
     placa_detectada: str
     vehiculos_data: List[Dict[str, Any]]
 
-# --- 4. Inicialización de la Aplicación ---
+# --- Inicialización de la Aplicación ---
 
-app = FastAPI(title="Servicio de Consulta de Vehículos con LPR (EasyOCR)")
+app = FastAPI(title="Deteccion de placas")
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -78,8 +76,7 @@ app.add_middleware(
         "https://*.ngrok-free.app",     # Para ngrok free tier
         "http://*.ngrok.io",            # HTTP también
         "http://*.ngrok-free.app",
-        # Agrega también esto para mayor flexibilidad
-        "*"                             # ⚠️ SOLO para desarrollo/testing
+        "*" 
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -87,7 +84,7 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# --- 5. Función de Conexión a la BD ---
+# --- Función de Conexión a la BD ---
 
 def get_db_connection():
     """Establece y devuelve una conexión a la base de datos PostgreSQL."""
@@ -109,14 +106,14 @@ def get_db_connection():
     except Exception as e:
         raise HTTPException(status_code=500, detail="Error interno: No se pudo conectar a la base de datos.")
 
-# --- 6. FUNCIONES DE PROCESAMIENTO DE IMAGEN MEJORADAS ---
+# --- FUNCIONES DE PROCESAMIENTO DE IMAGEN ---
 
 def preprocess_image(image_array: np.ndarray) -> np.ndarray:
     """
-    Preprocesa la imagen para mejorar la detección de texto.
+    Preprocesa la imagen para mejorar la detección de texto en placas.
     """
     try:
-        # Convertir a escala de grises si es color
+        # Convertir a escala de grises
         if len(image_array.shape) == 3:
             gray = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
         else:
@@ -125,37 +122,49 @@ def preprocess_image(image_array: np.ndarray) -> np.ndarray:
         # Aplicar filtro bilateral para reducir ruido manteniendo bordes
         filtered = cv2.bilateralFilter(gray, 11, 17, 17)
         
-        # Mejorar contraste usando CLAHE
+        # Mejorar contraste 
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
         enhanced = clahe.apply(filtered)
         
-        return enhanced
+        return enhanced 
+        
     except Exception as e:
         return image_array
 
 def is_valid_license_plate(text: str) -> bool:
     """
-    Verifica si el texto tiene formato de placa válida.
+    Verifica si el texto tiene formato de placa de Sinaloa (AAA-###-A/D) o similar,
+    dado que el guion puede omitirse (AAAAAAA).
     """
-    if not text or len(text) < 5:
+    if not text:
         return False
     
-    # Remover guiones para validación
-    clean_text = text.replace('-', '')
+    # Limpieza estricta: solo alfanuméricos y pasar a mayúsculas
+    clean_text = ''.join(c for c in text if c.isalnum()).upper()
     
-    # Longitudes típicas de placas
-    if len(clean_text) not in [6, 7]:
+    # La longitud debe ser 7 
+    if len(clean_text) != 7:
         return False
     
-    # Contar letras y números
-    letters = sum(c.isalpha() for c in clean_text)
-    digits = sum(c.isdigit() for c in clean_text)
+    # Formato esperado: 3 letras + 3 números + 1 letra/número (AAA###X)
     
-    # Debe tener al menos 2 letras y 2 números
-    if letters >= 2 and digits >= 2:
-        return True
+    part1 = clean_text[:3]
+    part2 = clean_text[3:6]
+    part3 = clean_text[6:]
     
-    return False
+    # 3 primeros deben ser LETRAS
+    if not part1.isalpha():
+        return False
+        
+    # 3 siguientes deben ser NÚMEROS
+    if not part2.isdigit():
+        return False
+        
+    # Último debe ser ALFANUMÉRICO
+    if not part3.isalnum():
+        return False
+        
+    return True
 
 def smart_character_correction(text: str) -> str:
     """
@@ -166,7 +175,7 @@ def smart_character_correction(text: str) -> str:
     
     # Diccionario de correcciones con pesos (caracteres comúnmente confundidos)
     confusion_rules = [
-        ('H', 'N', 0.9),  # H → N (alto peso para tu caso específico)
+        ('H', 'N', 0.9),  # H → N 
         ('4', 'A', 0.8),  # 4 → A  
         ('0', 'O', 0.7),  # 0 → O
         ('1', 'I', 0.7),  # 1 → I
@@ -191,13 +200,13 @@ def smart_character_correction(text: str) -> str:
             # Calcular score basado en validez y peso de corrección
             score = weight
             if is_valid_license_plate(alternative):
-                score += 0.5  # Bonus si es válida
+                score += 0.5  
             
             if score > best_score:
                 best_score = score
                 best_candidate = alternative
     
-    # Si encontramos una mejora significativa, aplicarla
+    # Si encontramos una mejora significativa se aplica
     if best_score > 0.8 and best_candidate != original_text:
         return best_candidate
     
@@ -205,40 +214,48 @@ def smart_character_correction(text: str) -> str:
 
 def enhanced_postprocess_text(text: str) -> str:
     """
-    Postprocesamiento mejorado con corrección inteligente y SIN GUIONES.
+    Postprocesamiento con limpieza, corrección inteligente y normalización
     """
     if not text:
         return ""
-    
-    # Limpieza básica - mantener solo alfanuméricos
+        
+    # Limpieza inicial
     cleaned = ''.join(c for c in text if c.isalnum()).upper()
     cleaned = cleaned.replace(' ', '')
     
-    # Aplicar corrección inteligente de caracteres
+    temp_cleaned = cleaned
+    
+    if len(temp_cleaned) >= 7 and temp_cleaned.startswith(('VHD', 'VSR', 'VHK', 'VPR')): # Filtro por prefijos comunes
+        # Asumimos que la placa es AAA###X. La F debe ser ruido si la longitud es > 7.
+        # Si la longitud es 8 y la F está en la posición 3 (índice 3), la quitamos.
+        if len(temp_cleaned) == 8 and temp_cleaned[3] == 'F':
+            # Intentar eliminar la F y ver si el resultado es válido
+            potential_plate = temp_cleaned[:3] + temp_cleaned[4:] # Elimina el caracter en índice 3
+            if is_valid_license_plate(potential_plate):
+                temp_cleaned = potential_plate
+                
+        
+    cleaned = temp_cleaned 
+    
     corrected = smart_character_correction(cleaned)
     
-    # VERIFICAR Y CORREGIR FORMATOS COMUNES DE PLACAS SIN GUIONES
     
-    # Formato: 3 letras + 3 números (NSR494A)
-    if len(corrected) == 6:
-        if corrected[:3].isalpha() and corrected[3:].isalnum():
-            # Este es un formato válido sin guiones
-            return corrected
-    
-    # Formato: 3 letras + 4 números (ABC1234)
-    if len(corrected) == 7:
-        if corrected[:3].isalpha() and corrected[3:].isdigit():
-            return corrected
-    
-    # Formato: 3 números + 3 letras (123ABC)
-    if len(corrected) == 6:
-        if corrected[:3].isdigit() and corrected[3:].isalpha():
-            return corrected
-    
-    # Si no coincide con patrones comunes pero tiene longitud adecuada, devolver igual
-    if len(corrected) in [6, 7] and any(c.isalpha() for c in corrected) and any(c.isdigit() for c in corrected):
+    if len(corrected) > 7:
+        best_candidate = ""
+        for i in range(len(corrected) - 6):
+            segment = corrected[i:i+7]
+            if is_valid_license_plate(segment):
+                return segment
+            
+            if len(segment) == 7 and segment[:3].isalpha():
+                best_candidate = segment
+                    
+        if best_candidate:
+            return best_candidate
+        
+    if len(corrected) == 7 and is_valid_license_plate(corrected):
         return corrected
-    
+        
     return corrected
 
 def detect_license_plate_regions(image: np.ndarray) -> list:
@@ -277,7 +294,7 @@ def detect_license_plate_regions(image: np.ndarray) -> list:
         return []
 
 def wait_for_models(timeout=120):
-    """Espera a que los modelos se carguen con timeout más generoso."""
+    """Espera a que los modelos se carguen."""
     start_time = time.time()
     while not models_loaded and reader is None:
         if time.time() - start_time > timeout:
@@ -288,20 +305,16 @@ def wait_for_models(timeout=120):
         raise HTTPException(status_code=503, detail=f"Error en servicio de reconocimiento: {loading_error}")
 
 def detect_license_plate(image_bytes: bytes) -> str:
-    """
-    Función ROBUSTA para detección de placas.
-    """
     # Esperar a que los modelos estén listos
     wait_for_models()
     
     if reader is None:
-        return "AC001"  # Fallback SIN guión
+        return "AC001"  # string de respuesta por default, si se recibe este string en el cliente quiere decir que no se reconocio la placa
     
     try:
         # Convertir bytes a array NumPy
         image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
         image_array = np.array(image)
-        
         
         # Preprocesar imagen
         processed_image = preprocess_image(image_array)
@@ -312,7 +325,7 @@ def detect_license_plate(image_bytes: bytes) -> str:
             detail=1,
             paragraph=False,
             batch_size=1,
-            allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',  # SIN GUIONES
+            allowlist='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 
             min_size=10
         )
         
@@ -322,7 +335,6 @@ def detect_license_plate(image_bytes: bytes) -> str:
             if confidence < 0.3:
                 continue
             
-            # USAR EL POSTPROCESAMIENTO MEJORADO (SIN GUIONES)
             cleaned_text = enhanced_postprocess_text(text)
             
             if cleaned_text and is_valid_license_plate(cleaned_text):
@@ -336,7 +348,7 @@ def detect_license_plate(image_bytes: bytes) -> str:
             best_plate = plate_candidates[0][0]
             return best_plate
         
-        # Estrategia 2: Si no hay candidatos válidos, buscar el texto más prometedor
+        # Si no hay candidatos válidos, buscar el texto más prometedor
         promising_candidates = []
         
         for (bbox, text, confidence) in results:
@@ -352,7 +364,7 @@ def detect_license_plate(image_bytes: bytes) -> str:
             best_promise = promising_candidates[0][0]
             return best_promise
         
-        # Estrategia 3: Búsqueda en regiones específicas
+        # Búsqueda en regiones específicas
         regions = detect_license_plate_regions(image_array)
         
         for i, (x1, y1, x2, y2) in enumerate(regions[:3]):
@@ -377,14 +389,14 @@ def detect_license_plate(image_bytes: bytes) -> str:
                 print(f"Error procesando región {i+1}: {e}")
                 continue
         
-        return "AC001"  # SIN guión
+        return "AC001"  #Valor por default de error al detectar
         
     except Exception as e:
         print(f"Error crítico en detección de placa: {e}")
         print(f"Traceback: {traceback.format_exc()}")
         return "AC001"  # SIN guión
 
-# --- 7. Lógica de Consulta a BD ---
+# --- Lógica de Consulta a BD ---
 
 def query_db_with_sp(sp_name: str, data: dict) -> list[dict]:
     """
@@ -403,7 +415,7 @@ def query_db_with_sp(sp_name: str, data: dict) -> list[dict]:
         cur.execute(query, (json_payload,))
         
         # HACER COMMIT EXPLÍCITO para operaciones de escritura
-        if sp_name in ['write_log', 'save_log']:  # Agrega aquí otros SPs de escritura
+        if sp_name in ['write_log', 'save_log', 'write_incidencia']:  # Agrega aquí otros SPs de escritura
             conn.commit()
         
         result_row = cur.fetchone()
@@ -466,6 +478,22 @@ def write_log_api(data: dict):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al escribir log: {e}")
+
+@app.post("/api/incidencia/write/", response_model=dict, summary="Escribe una incidencia en la base de datos")
+def write_log_api(data: dict):
+    """
+    Recibe un JSON con datos para la incidencia, llama al SP 'write_incidencia'
+    y devuelve el resultado de la operación.
+    """
+    try:
+        result = query_db_with_sp(sp_name="write_incidencia", data=data)
+        return {
+            "status": "success",
+            "message": "incidencia registrada correctamente",
+            "data": result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al escribir incidencia: {e}")
 
 # Endpoint adicional para llamar cualquier SP genérico
 @app.post("/api/execute-sp/{sp_name}", response_model=dict, summary="Ejecuta cualquier stored procedure")

@@ -1,5 +1,7 @@
+import 'package:deteccion_placas/incidencia_list.dart';
 import 'package:deteccion_placas/utilities/confirm_dialog_util.dart';
 import 'package:deteccion_placas/utilities/msg_util.dart';
+import 'package:deteccion_placas/vehicle_list.dart';
 import 'package:deteccion_placas/vehiculo_data.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,12 +9,11 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http_parser/http_parser.dart'; // Importante para definir el tipo de contenido
+import 'package:http_parser/http_parser.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-// Importaciones adicionales
 import 'api_service.dart';
-import 'logs_list.dart'; // Contiene la clase ApiService con el getter baseUrl
+import 'logs_list.dart';
 
 void main() {
   runApp(const MyApp());
@@ -51,17 +52,13 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   // --- VARIABLES DE ESTADO ---
   final ApiService _apiService = ApiService();
-  String _estado = 'Iniciando...';
-  // bool _conexionExitosa = false; // Variable no usada, se eliminó
 
   bool _isLoading = true;
   bool _isProcessing = false;
-  int _selectedIndex = 0; // Índice para el BottomNavigationBar
+  int _selectedIndex = 0;
 
-  // Lista para guardar todos los logs
   List<dynamic> _allLogs = [];
 
-  // Lista para mostrar solo los 4 logs más recientes en la pantalla principal
  List<dynamic> _recentLogs = List.generate(
       2,
           (index) => {
@@ -72,6 +69,8 @@ class _MyHomePageState extends State<MyHomePage> {
       }
   );
 
+  List<dynamic> _vehiculos = [];
+
   String _totalRegisters = '...';
   String _todayDetections = '...';
 
@@ -81,19 +80,22 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    _getData();
+  }
+
+  _getData() async{
     _readRecentLogs();
+    _readVehiculos();
   }
 
   // --- MÉTODOS DE UTILIDAD ---
 
-  // Nuevo método para inferir el tipo de imagen del nombre del archivo
   String _getMimeTypeFromFileName(String fileName) {
     if (fileName.toLowerCase().endsWith('.png')) {
       return 'image/png';
     } else if (fileName.toLowerCase().endsWith('.gif')) {
       return 'image/gif';
     }
-    // Default a JPEG si no se reconoce o es el tipo más común
     return 'image/jpeg';
   }
 
@@ -113,11 +115,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // --- MÉTODOS DE API ---
 
-  // Método existente para leer logs (ahora guarda la lista completa y los 4 recientes)
   Future<void> _readRecentLogs() async {
     setState(() {
       _isLoading = true;
-      _estado = '🔍 Consultando registros...';
     });
 
     try {
@@ -127,30 +127,19 @@ class _MyHomePageState extends State<MyHomePage> {
       );
 
       if (response != null && response is List && response.isNotEmpty) {
-        // 1. Guardar TODOS los logs
         _allLogs = response;
-
-        // 2. Calcular contadores
         _totalRegisters = _allLogs.length.toString();
-        // Filtrar por logs de hoy. Esto requiere que 'fecha_scan' sea un timestamp válido
         final today = DateTime.now().toIso8601String().substring(0, 10);
         _todayDetections = _allLogs.where((log) => log['fecha_scan']?.toString().startsWith(today) ?? false).length.toString();
 
-
-        // 3. Obtener los 4 logs más recientes (usando .take(4).toList())
         _recentLogs = _allLogs.take(2).toList();
 
-        // Rellenar con placeholders si hay menos de 4 logs para evitar errores de renderizado
         while (_recentLogs.length < 2) {
           _recentLogs.add({'id': 0, 'placa': '---', 'fecha_scan': '---', 'estado': 'N/A'});
         }
 
 
-        setState(() {
-          _estado = '✅ Consulta exitosa: ${_allLogs.length} logs totales cargados.';
-        });
       } else {
-        // En caso de respuesta vacía, resetear ambas listas
         _allLogs = [];
         _recentLogs = List.generate(2, (index) => {'id': 0, 'placa': '---', 'fecha_scan': '---', 'estado': 'N/A'});
         throw Exception('Respuesta de API vacía o inválida.');
@@ -161,8 +150,35 @@ class _MyHomePageState extends State<MyHomePage> {
         _recentLogs = List.generate(2, (index) => {'id': 0, 'placa': 'ERROR', 'fecha_scan': 'ERROR', 'estado': 'error'});
         _totalRegisters = '---';
         _todayDetections = '---';
-        _estado = '❌ Error al cargar datos: $e';
+        MsgtUtil.showError(context, 'Error al leer los logs: ${e.toString()}');
       });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _readVehiculos() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await _apiService.post(
+          '/api/vehiculos/read/',
+          {'AC': 'get_vehicle_list'}
+      );
+
+      if (response != null && response is List && response.isNotEmpty) {
+        _vehiculos = response;
+
+      } else {
+        _vehiculos = [];
+        throw Exception('Respuesta de API vacía o inválida.');
+      }
+    } catch (e) {
+      MsgtUtil.showError(context, 'Error al leer los vehiculos: ${e.toString()}');
     } finally {
       setState(() {
         _isLoading = false;
@@ -172,43 +188,24 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // --- Métodos de Navegación ---
 
-  void _openLogsListScreen() {
-    // 1. Deseleccionar el BottomNavigationBar temporalmente (opcional, pero mejora UX)
-    setState(() {
-      _selectedIndex = 0;
-    });
-
-    // 2. Navegar a la pantalla de la lista de logs, pasando la lista completa
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => LogsListScreen(
-          logs: _allLogs,
-          onLogTap: _openManualResultScreen,
-        ),
-      ),
-    ).then((_) {
-      // 3. Al regresar, forzamos la recarga de logs (para ver el log recién escaneado)
-      _readRecentLogs();
-    });
-  }
-
-  _openManualResultScreen(Map<String, dynamic> responseData) {
+  _openManualResultScreen(Map<String, dynamic> responseData) async{
     // Crear el objeto VehiculoData (asumiendo que responseData tiene el formato correcto)
     final vehiculoData = VehiculoData.fromJson(responseData);
 
     // Navegar a la pantalla de resultados
-    Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => DetectionResultScreen(
           data: vehiculoData,
         ),
       ),
-    ).then((_) {
-      // Al cerrar la pantalla de resultado, recargar los logs.
-      _readRecentLogs();
-    });
+    ).then((value) {
+    },);
+
+    if(result != null && result == true){
+      MsgtUtil.showSuccess(context, 'Se ha registrado la incidencia correctamente');
+    }
   }
 
 
@@ -368,7 +365,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _saveScanLog({required int vehiculoId}) async {
-    // No cambiamos el estado _isLoading aquí para no interrumpir el flujo visual
     // mientras se muestra la pantalla de resultados.
     try {
       final response = await _apiService.post(
@@ -656,7 +652,11 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               TextButton(
                 // CONEXIÓN DEL BOTÓN "Ver todo"
-                onPressed: _openLogsListScreen,
+                onPressed: () {
+                  setState(() {
+                    _selectedIndex = 1;
+                  });
+                },
                 child: Text(
                   'Ver todo',
                   style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600),
@@ -693,6 +693,41 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
     );
+
+    Widget logsBody(){
+      return LogsListScreen(
+        logs: _allLogs,
+        onLogTap: _openManualResultScreen,
+      );
+    }
+
+    Widget incidentsBody(){
+      return IncidentListScreen();
+    }
+
+    Widget vehiclesBody(){
+      return VehiclesListScreen(
+        vehicles: _vehiculos,
+        onVehicleTap: (dynamic) {
+
+        },
+      );
+    }
+
+    Widget _getBody(index){
+      switch(index){
+        case 0:
+          return homeBody;
+        case 1:
+          return logsBody();
+        case 2:
+          return incidentsBody();
+        case 3:
+          return vehiclesBody();
+
+      }
+      return Container();
+    }
 
     return Scaffold(
       // --- 1. AppBar ---
@@ -735,7 +770,7 @@ class _MyHomePageState extends State<MyHomePage> {
       // --- 2. Body (Muestra la pantalla de inicio) ---
       body: Stack(
         children: [
-          homeBody,
+          _getBody(_selectedIndex),
           if (_isProcessing)
             Positioned.fill(
               child: Container(
@@ -759,21 +794,16 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
 
-      // --- 3. Barra de Navegación Inferior ---
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
         currentIndex: _selectedIndex,
         onTap: (index) {
-          if (index == 1) {
-            // CONEXIÓN DEL ITEM 'Historial'
-            _openLogsListScreen();
-          } else {
-            setState(() {
-              _selectedIndex = index;
-            });
+          if(index == 3){
+            _readVehiculos();
           }
+          setState(() {_selectedIndex = index;});
         },
         items: const [
           BottomNavigationBarItem(
@@ -786,11 +816,11 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart),
-            label: 'Reportes',
+            label: 'Incidencias',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Ajustes',
+            icon: Icon(Icons.car_crash),
+            label: 'Vehiculos',
           ),
         ],
       ),
