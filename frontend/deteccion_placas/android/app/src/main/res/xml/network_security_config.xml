@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+    Permite la comunicación con tu URL de ngrok (HTTPS) y tráfico HTTP local (10.0.2.2 es el emulador)
+    Si estás usando ngrok, la comunicación es HTTPS, lo cual es seguro.
+    -->
+    <domain-config cleartextTrafficPermitted="false">
+        <!-- Reemplaza "a1b2-3c4d-5e6f-7g8h.ngrok-free.app" con el dominio de tu ngrok -->
+        <domain includeSubdomains="true">a1b2-3c4d-5e6f-7g8h.ngrok-free.app</domain>
+    </domain-config>
+
+    <!-- Esto asegura que el emulador pueda acceder a la red local de tu PC si lo necesitas -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

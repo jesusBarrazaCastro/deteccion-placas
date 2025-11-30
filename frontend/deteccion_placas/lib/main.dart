@@ -1,12 +1,14 @@
 import 'package:deteccion_placas/utilities/confirm_dialog_util.dart';
 import 'package:deteccion_placas/utilities/msg_util.dart';
 import 'package:deteccion_placas/vehiculo_data.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart'; // Importante para definir el tipo de contenido
+import 'package:permission_handler/permission_handler.dart';
 
 // Importaciones adicionales
 import 'api_service.dart';
@@ -53,14 +55,15 @@ class _MyHomePageState extends State<MyHomePage> {
   // bool _conexionExitosa = false; // Variable no usada, se eliminó
 
   bool _isLoading = true;
+  bool _isProcessing = false;
   int _selectedIndex = 0; // Índice para el BottomNavigationBar
 
   // Lista para guardar todos los logs
   List<dynamic> _allLogs = [];
 
   // Lista para mostrar solo los 4 logs más recientes en la pantalla principal
-  List<dynamic> _recentLogs = List.generate(
-      4,
+ List<dynamic> _recentLogs = List.generate(
+      2,
           (index) => {
         'id': 0,
         'placa': 'Cargando...',
@@ -135,10 +138,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
 
         // 3. Obtener los 4 logs más recientes (usando .take(4).toList())
-        _recentLogs = _allLogs.take(4).toList();
+        _recentLogs = _allLogs.take(2).toList();
 
         // Rellenar con placeholders si hay menos de 4 logs para evitar errores de renderizado
-        while (_recentLogs.length < 4) {
+        while (_recentLogs.length < 2) {
           _recentLogs.add({'id': 0, 'placa': '---', 'fecha_scan': '---', 'estado': 'N/A'});
         }
 
@@ -149,13 +152,13 @@ class _MyHomePageState extends State<MyHomePage> {
       } else {
         // En caso de respuesta vacía, resetear ambas listas
         _allLogs = [];
-        _recentLogs = List.generate(4, (index) => {'id': 0, 'placa': '---', 'fecha_scan': '---', 'estado': 'N/A'});
+        _recentLogs = List.generate(2, (index) => {'id': 0, 'placa': '---', 'fecha_scan': '---', 'estado': 'N/A'});
         throw Exception('Respuesta de API vacía o inválida.');
       }
     } catch (e) {
       setState(() {
         _allLogs = [];
-        _recentLogs = List.generate(4, (index) => {'id': 0, 'placa': 'ERROR', 'fecha_scan': 'ERROR', 'estado': 'error'});
+        _recentLogs = List.generate(2, (index) => {'id': 0, 'placa': 'ERROR', 'fecha_scan': 'ERROR', 'estado': 'error'});
         _totalRegisters = '---';
         _todayDetections = '---';
         _estado = '❌ Error al cargar datos: $e';
@@ -212,8 +215,42 @@ class _MyHomePageState extends State<MyHomePage> {
   // --- MÉTODOS DE DETECCIÓN DE PLACA (USANDO MULTIPART) ---
 
   // 1. Método para seleccionar la imagen de la galería
+  Future<bool> _checkCameraPermission(BuildContext context) async {
+    // 1. Solicitar el permiso. Si ya está concedido, devuelve 'isGranted'.
+    final status = await Permission.camera.request();
+
+    if (status.isGranted) {
+      // Permiso concedido.
+      return true;
+    } else if (status.isPermanentlyDenied) {
+      // Permiso denegado permanentemente (el usuario marcó "No volver a preguntar").
+      // Abrir la configuración del sistema para que el usuario lo active manualmente.
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Permiso de cámara denegado. Actívalo en Configuración de la App.')
+          )
+      );
+      await openAppSettings();
+      return false;
+    } else {
+      // Permiso denegado por primera vez o restringido.
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Se necesita permiso de cámara para escanear la placa.')
+          )
+      );
+      return false;
+    }
+  }
+
   void _captureImageAndCallAPI() async {
     if (_isLoading) return; // No permitir acciones mientras carga
+
+    // AÑADIDO: 1. Verificar el permiso de la cámara antes de continuar
+    if (!await _checkCameraPermission(context)) {
+      // Si el permiso no fue concedido, detenemos la ejecución de la función.
+      return;
+    }
 
     final ImagePicker picker = ImagePicker();
 
@@ -263,18 +300,13 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _callPlateDetectionAPI(XFile imageFile, String acType) async {
-    setState(() {
-      _isLoading = true;
-      _placaDetectada = 'Detectando placa...';
-    });
+    setState(() {_isProcessing = true;});
 
     final uri = Uri.parse('${ApiService.baseUrl}/api/vehiculos/detect-plate/');
     var request = http.MultipartRequest('POST', uri);
 
     try {
-      // Añadir el campo de formulario AC_type
       request.fields['AC_type'] = acType;
-
       // Leer los bytes del archivo (compatible con Web y Móvil)
       final bytes = await imageFile.readAsBytes();
       final mimeTypeString = _getMimeTypeFromFileName(imageFile.name);
@@ -293,16 +325,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(utf8.decode(response.bodyBytes));
-        // final placa = responseData['placa_detectada'] ?? 'PLACA NO ENCONTRADA'; // Variable no usada
 
         if(responseData['placa_detectada'] == 'AC001'){
-          ConfirmDialog.error(
-              context,
-              title: 'No se pudo detectar la placa',
-              message: 'Intente de nuevo'
-          );
-          return;
+          Future.microtask(() {
+            ConfirmDialog.error(
+                context,
+                title: 'No se pudo detectar la placa',
+                message: 'Hubo un problema al detectar la placa o no fue encontrada en nuestro sistema, favor de intentarlo nuevamente'
+            );
+          });
+          return; // Terminar la función
+
         }
+
         dynamic vehiculoData = responseData['vehiculos_data'][0];
         await _saveScanLog(vehiculoId: vehiculoData['id']);
 
@@ -310,7 +345,7 @@ class _MyHomePageState extends State<MyHomePage> {
           _placaDetectada = vehiculoData['placa'];
         });
 
-        _openManualResultScreen(vehiculoData); //DESPLEGAR LOS RESULTADOS DE LA BUSQUEDA
+        await _openManualResultScreen(vehiculoData);
 
       } else {
         final errorBody = json.decode(utf8.decode(response.bodyBytes));
@@ -318,19 +353,17 @@ class _MyHomePageState extends State<MyHomePage> {
         throw Exception('Fallo la detección (${response.statusCode}): $errorDetail');
       }
     } catch (e) {
-      ConfirmDialog.error(
-          context,
-          title: 'Error al detectar la placa',
-          message: e.toString()
-      );
-    } finally {
-      // La recarga de logs se hace en _openManualResultScreen.then()
-      // Solo desactivamos el loading si NO navegamos a otra pantalla
-      if (ModalRoute.of(context)?.isCurrent ?? true) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+
+      Future.microtask(() {
+        ConfirmDialog.error(
+            context,
+            title: 'Error al detectar la placa',
+            message: e.toString()
+        );
+      });
+    }
+    finally{
+      setState(() {_isProcessing = false;});
     }
   }
 
@@ -352,6 +385,34 @@ class _MyHomePageState extends State<MyHomePage> {
     } catch (e) {
       MsgtUtil.showError(context, 'Error al guardar el log: ${e.toString()}');
     }
+  }
+
+  void _showLoadingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      // El 'barrierDismissible: false' es crucial para que el usuario
+      // no pueda cerrar el diálogo tocando fuera mientras se procesa la API.
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const PopScope(
+          canPop: false, // Evita que se cierre con el botón de retroceso de Android
+          child: Dialog(
+            // Estilo básico para el diálogo de "Identificando..."
+            child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(width: 20),
+                  Text("Identificando placa..."),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
 
@@ -402,6 +463,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
   }
+
 
   Widget _buildCounterCard(BuildContext context, {
     required IconData icon,
@@ -671,7 +733,31 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
 
       // --- 2. Body (Muestra la pantalla de inicio) ---
-      body: homeBody,
+      body: Stack(
+        children: [
+          homeBody,
+          if (_isProcessing)
+            Positioned.fill(
+              child: Container(
+                // Fondo semi-transparente para indicar que la UI está bloqueada
+                color: Colors.black.withOpacity(0.4),
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(color: Colors.white),
+                      SizedBox(height: 15),
+                      Text(
+                        "Identificando placa...",
+                        style: TextStyle(color: Colors.white, fontSize: 16, decoration: TextDecoration.none),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
 
       // --- 3. Barra de Navegación Inferior ---
       bottomNavigationBar: BottomNavigationBar(

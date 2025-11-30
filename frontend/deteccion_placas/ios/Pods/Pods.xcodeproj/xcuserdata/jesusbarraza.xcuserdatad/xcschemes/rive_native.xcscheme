@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "0EC4407CC698D348F4275AFAF0318E87"
-               BuildableName = "rive_common_privacy.bundle"
-               BlueprintName = "rive_common-rive_common_privacy"
+               BlueprintIdentifier = "63E75DB51B226C6ABFE7C8BE27FA433F"
+               BuildableName = "rive_native.framework"
+               BlueprintName = "rive_native"
                ReferencedContainer = "container:Pods.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>

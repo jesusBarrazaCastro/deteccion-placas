@@ -39,11 +39,6 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>modal_progress_hud_nsn.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
 		<key>path_provider_foundation-path_provider_foundation_privacy.xcscheme</key>
 		<dict>
 			<key>isShown</key>
@@ -54,12 +49,7 @@
 			<key>isShown</key>
 			<false/>
 		</dict>
-		<key>rive_common-rive_common_privacy.xcscheme</key>
-		<dict>
-			<key>isShown</key>
-			<false/>
-		</dict>
-		<key>rive_common.xcscheme</key>
+		<key>rive_native.xcscheme</key>
 		<dict>
 			<key>isShown</key>
 			<false/>

@@ -10,7 +10,8 @@
 #endif
 #endif
 
+#import "rive_native_plugin.h"
 
-FOUNDATION_EXPORT double modal_progress_hud_nsnVersionNumber;
-FOUNDATION_EXPORT const unsigned char modal_progress_hud_nsnVersionString[];
+FOUNDATION_EXPORT double rive_nativeVersionNumber;
+FOUNDATION_EXPORT const unsigned char rive_nativeVersionString[];
 

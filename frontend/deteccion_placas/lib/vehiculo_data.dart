@@ -355,7 +355,7 @@ class _DetectionResultScreenState extends State<DetectionResultScreen> {
       String value,
       ) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(10),
@@ -363,7 +363,7 @@ class _DetectionResultScreenState extends State<DetectionResultScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: primaryColor, size: 20),
+          Icon(icon, color: primaryColor, size: 17),
           const SizedBox(height: 4),
           Text(title, style: const TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center),
           const SizedBox(height: 2),
