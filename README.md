@@ -47,15 +47,26 @@ El proyecto se basa en una arquitectura contenerizada para asegurar la portabili
 
 ## 💡 Manual de Usuario y Demostración
 
+### 🎬 Video Demostración
+Vea cómo funciona el sistema de detección y gestión en acción:
+
+[![Mira nuestro video en YouTube](https://img.youtube.com/vi/7U5_wkJ_-wg/0.jpg)](https://www.youtube.com/watch?v=7U5_wkJ_-wg)
+
+### Pantallas principales
+<img width="394" height="872" alt="Screenshot 2025-11-30 at 20 35 21" src="https://github.com/user-attachments/assets/a81b3970-df34-48f7-99ca-48ecb6eb05f8" />
+<img width="393" height="879" alt="Screenshot 2025-11-30 at 20 36 23" src="https://github.com/user-attachments/assets/1d41b14c-67ed-4eb2-8440-698711b8a089" />
+<img width="395" height="844" alt="Screenshot 2025-11-30 at 20 36 57" src="https://github.com/user-attachments/assets/1faf3ff7-8a1d-49fe-a089-3c94f9df424d" />
+<img width="396" height="875" alt="Screenshot 2025-11-30 at 20 37 36" src="https://github.com/user-attachments/assets/8a558a9e-d4ba-43d9-8386-f90cdd0428e1" />
+<img width="396" height="871" alt="Screenshot 2025-11-30 at 20 37 59" src="https://github.com/user-attachments/assets/0dd2a6f5-1ae3-4733-9768-eec3c6fb6a48" />
+<img width="399" height="881" alt="Screenshot 2025-11-30 at 20 38 28" src="https://github.com/user-attachments/assets/57e6a79a-a1b6-4f1f-92b9-52c78491c5db" />
+<img width="392" height="871" alt="Screenshot 2025-11-30 at 20 38 52" src="https://github.com/user-attachments/assets/818ff257-bfc6-4e2f-a670-ae780aa508bb" />
+
+
 ### Manual de Usuario
 Este manual está dirigido al personal que utilizará la aplicación.
 
 * [Enlace al Manual de Usuario PDF/Web para el usuario final]
 
-### 🎬 Video Demostración
-Vea cómo funciona el sistema de detección y gestión en acción:
-
-[![Mira nuestro video en YouTube](https://img.youtube.com/vi/7U5_wkJ_-wg/0.jpg)](https://www.youtube.com/watch?v=7U5_wkJ_-wg)
 
 ---
 
