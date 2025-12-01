@@ -42,6 +42,16 @@ El proyecto se basa en una arquitectura contenerizada para asegurar la portabili
 └── 📁 database_scripts       # Scripts SQL o de migración para la base de datos
 ```
 
+## 📱 Descarga del Instalador Android 🚀
+
+¡La forma más rápida de usar la aplicación!
+
+El archivo **`deteccion-placas.apk`** es el instalador directo de la aplicación móvil para el sistema operativo **Android**, desarrollado con Flutter. Este archivo permite la instalación en cualquier dispositivo Android compatible, sin necesidad de usar tiendas de aplicaciones.
+
+| Archivo | Descripción | Link de Descarga |
+| :--- | :--- | :--- |
+| `deteccion-placas.apk` | Instalador directo para la app Android. | [Descargar APK (v1.0.0)](https://github.com/jesusBarrazaCastro/deteccion-placas/blob/main/deteccion-placas.apk)
+
 
 ---
 
