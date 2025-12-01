@@ -111,8 +111,7 @@ La aplicación fue diseñada con una arquitectura moderna y modular, separando c
 
 #### **Diagrama de Arquitectura:**
 
-<img width="1000" height="1000" alt="Arquitectura de la aplicación" src="https://github.com/user-attachments/assets/6f7ef14e-769b-46dc-a5eb-1199e6031b07" />
-
+<img width="733" height="903" alt="Screenshot 2025-11-30 at 20 48 50" src="https://github.com/user-attachments/assets/cb365b9b-e09d-4a6d-a74c-c7bd833e4a6e" />
 
 ### 2. Esquema de la Base de Datos (PostgreSQL)
 El sistema utiliza **PostgreSQL** como motor de base de datos relacional. El diseño se centra en cuatro entidades principales: `persona`, `vehiculo`, `scan_log` (Registro de Escaneos) e `incidencia`.
