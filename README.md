@@ -65,8 +65,7 @@ Vea cómo funciona el sistema de detección y gestión en acción **realizando d
 ### Manual de Usuario
 Este manual está dirigido al personal que utilizará la aplicación.
 
-* [Enlace al Manual de Usuario PDF/Web para el usuario final]
-
+* [docs/Manual de usuario - deteccion placas.pdf](https://github.com/jesusBarrazaCastro/deteccion-placas/blob/main/docs/Manual%20de%20usuario%20-%20Deteccion%20placas.pdf)
 
 ---
 
