@@ -2,7 +2,14 @@
 
 
 
-Un sistema modular y escalable para la detección de placas vehiculares mediante Visión por Computadora (CV), diseñado para la gestión de accesos y la supervisión de vehículos en entornos controlados (ej. instituciones o estacionamientos privados).
+Un sistema modular y escalable para la detección de placas vehiculares mediante Visión por Computadora (CV), diseñado para la gestión de accesos y la supervisión de vehículos en el tecnológico de culiacán.
+
+---
+
+## 👨‍💻 Autores
+Proyecto desarrollado por **Jesús Alberto Barraza Castro y Jesús Guadalupe Wong Camacho**  
+TecNM Campus Culiacán — Ingeniería en Tecnologías de la Información y Comunicaciones  
+2025
 
 ---
 
