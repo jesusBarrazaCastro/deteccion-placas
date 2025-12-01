@@ -92,7 +92,7 @@ Antes de comenzar, asegúrese de tener instalados los siguientes componentes:
 ## 📖 Documentación Técnica Detallada
 
 Para la documentación completa, consulte el documento principal en 
-[docs/Documentacion tecnica - deteccion placas.pdf]([https://tu-url-de-documentacion.com](https://github.com/jesusBarrazaCastro/deteccion-placas/blob/main/docs/Documentacion%20tecnica%20-%20deteccion%20placas.pdf))
+[docs/Documentacion tecnica - deteccion placas.pdf](https://github.com/jesusBarrazaCastro/deteccion-placas/blob/main/docs/Documentacion%20tecnica%20-%20deteccion%20placas.pdf)
 
 ### 1. Arquitectura del Sistema
 La aplicación fue diseñada con una arquitectura moderna y modular, separando claramente la capa de presentación de la lógica de negocio y la persistencia de datos. La arquitectura se compone de tres capas principales: **Frontend** (Capa de Presentación, con Flutter), **Backend** (Lógica de Negocio/Procesamiento, con Python/FastAPI) y **Base de Datos** (Capa de Datos, con PostgreSQL). Tanto el Backend como la Base de Datos se ejecutan dentro de contenedores **Docker**.
