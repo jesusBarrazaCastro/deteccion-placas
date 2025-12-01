@@ -15,7 +15,7 @@ TecNM Campus Culiacán — Ingeniería en Tecnologías de la Información y Comu
 
 ## 🚀 Tecnologías Principales (Stack Tecnológico)
 
-El proyecto se basa en una arquitectura de microservicios contenerizada para asegurar la portabilidad y el alto rendimiento.
+El proyecto se basa en una arquitectura contenerizada para asegurar la portabilidad y el alto rendimiento.
 
 | Componente | Tecnología | Propósito |
 | :--- | :--- | :--- |
