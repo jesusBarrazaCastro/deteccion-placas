@@ -120,12 +120,12 @@ La aplicación fue diseñada con una arquitectura moderna y modular, separando c
 
 #### **Diagrama de Arquitectura:**
 
-<img width="733" height="903" alt="Screenshot 2025-11-30 at 20 48 50" src="https://github.com/user-attachments/assets/cb365b9b-e09d-4a6d-a74c-c7bd833e4a6e" />
+<img width="1000" height="1000" alt="Arquitectura de la aplicación" src="https://github.com/user-attachments/assets/b6d19017-808d-41ed-9896-10006aafd72b" />
 
 ### 2. Esquema de la Base de Datos (PostgreSQL)
 El sistema utiliza **PostgreSQL** como motor de base de datos relacional. El diseño se centra en cuatro entidades principales: `persona`, `vehiculo`, `scan_log` (Registro de Escaneos) e `incidencia`.
 
-![WhatsApp Image 2025-11-30 at 00 14 48](https://github.com/user-attachments/assets/f4a92ef8-9948-47c1-b634-ce4b2e3836ef)
+<img width="733" height="903" alt="Screenshot 2025-11-30 at 20 48 50" src="https://github.com/user-attachments/assets/cb365b9b-e09d-4a6d-a74c-c7bd833e4a6e" />
 
 
 #### **Lógica de Negocio y Procedimientos Almacenados**
