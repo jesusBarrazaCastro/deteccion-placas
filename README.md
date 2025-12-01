@@ -55,7 +55,7 @@ Este manual está dirigido al personal que utilizará la aplicación.
 ### 🎬 Video Demostración
 Vea cómo funciona el sistema de detección y gestión en acción:
 
-[![Mira nuestro video en YouTube](https://img.youtube.com/vi/7U5_wkJ_-wg/0.jpg)](https://www.youtube.com/watch?v=7U5_wkJ_-wg)
+[![Mira nuestro video en YouTube](https://img.youtube.com/vi/7U5_wkJ_-wg/122.jpg)](https://www.youtube.com/watch?v=7U5_wkJ_-wg)
 
 ---
 
