@@ -28,10 +28,36 @@ El proyecto se basa en una arquitectura contenerizada para asegurar la portabili
 
 ## 📁 Estructura del Repositorio
 
-El repositorio está organizado de forma modular, reflejando las capas de la arquitectura:
-nombre-del-proyecto/ ├── .env.example # Variables de entorno para configuración (Backend/DB) ├── docker-compose.yml # Definición de servicios para Docker (Backend/DB) ├── README.md # 👈 Este archivo ├── backend/ # 📦 Código fuente del Backend (Python/FastAPI) │ ├── app/ # Lógica de FastAPI, API Endpoints │ ├── cv_model/ # Archivos del modelo de Visión por Computadora (CV) │ ├── requirements.txt # Dependencias de Python │ └── Dockerfile # Instrucciones para construir el contenedor del Backend ├── frontend/ # 📱 Código fuente del Frontend (Flutter) │ ├── lib/ # Lógica de la aplicación Flutter (UI, controllers, services) │ ├── pubspec.yaml # Dependencias de Flutter │ └── ... ├── database_scripts/ # 💾 Scripts de base de datos │ ├── schema.sql # Definición de tablas │ └── stored_procedures.sql # Funciones y lógica PL/pgSQL (ej. read_vehiculos) ├── docs/ # 📄 Documentación adicional (Manuales, informes) └── assets/ # 🖼️ Recursos multimedia (Imágenes de arquitectura, screenshots)
+```
+📦 deteccion-placas
+├── 📄 README.md              # Descripción general del proyecto
+├── 📄 docker-compose.yml     # Configuración para ejecutar la aplicación con Docker
+├── 📄 deteccion-placas.apk   # Archivo de instalación para Android
+├── 📁 backend                # Lógica del servidor, APIs y procesamiento (e.g., reconocimiento de placas)
+├── 📁 frontend               # Interfaz de usuario y componentes visuales de la aplicación
+├── 📁 data                   # Archivos de datos de la base de datos 
+├── 📁 docs                   # Documentación adicional, como manuales y guías
+|   ├── 📄 Documentacion_tecnica_deteccion_placas.pdf # Documento de la documentación técnica (archivo actual)
+|   └── 📄 manual_de_usuario.pdf # Manual de usuario para el manejo de la aplicación (¡NUEVO!)
+└── 📁 database_scripts       # Scripts SQL o de migración para la base de datos
+```
+
 
 ---
+
+## 💡 Manual de Usuario y Demostración
+
+### Manual de Usuario
+Este manual está dirigido al personal que utilizará la aplicación.
+
+* [Enlace al Manual de Usuario PDF/Web para el usuario final]
+
+### 🎬 Video Demostración
+Vea cómo funciona el sistema de detección y gestión en acción:
+* [Enlace a YouTube o Plataforma de Video]
+
+---
+
 
 ## 🛠️ Manual de Instalación de Entorno de Desarrollo
 
@@ -98,39 +124,3 @@ La interfaz de comunicación entre el Frontend (Flutter) y el Backend (Python co
 | **Vehículos** | `/api/vehiculos/read` | `POST` | Llama al procedimiento almacenado `read_vehiculos` con la acción `AC = 'by_id'` para la búsqueda inteligente de una placa. |
 | **Incidencias** | `/api/incidencia/write/` | `POST` | Registra una nueva incidencia en la base de datos. |
 
----
-
-## 💡 Manual de Usuario y Demostración
-
-### Manual de Usuario
-Este manual está dirigido al personal que utilizará la aplicación.
-
-* [Enlace al Manual de Usuario PDF/Web para el usuario final]
-
-### 🎬 Video Demostración
-Vea cómo funciona el sistema de detección y gestión en acción:
-* [Enlace a YouTube o Plataforma de Video]
-
----
-
-## 🤝 Guía de Contribución
-
-1.  **Reporte de Errores (Bugs):** Utilice la pestaña **Issues** para reportar cualquier error.
-2.  **Sugerencias de Funcionalidades:** Use la pestaña **Issues** para proponer nuevas *features*.
-3.  **Envío de Código:**
-    * Haga un **Fork** de este repositorio.
-    * Cree una nueva rama para su *feature* (`git checkout -b feature/nombre-de-tu-mejora`).
-    * Cree un **Pull Request (PR)** detallando claramente el propósito y el alcance de sus cambios.
-
----
-
-## 📄 Licencia
-
-Este proyecto se distribuye bajo la **Licencia [Nombre de Licencia]**. Consulte el archivo `LICENSE.md` en la raíz del repositorio para más detalles.
-
----
-
-## ✉️ Contacto
-
-* **Alumnos:** Jesús Alberto Barraza Castro, Jesús Guadalupe Wong Camacho
-* **Profesor:** Zuriel Dathan Mora Felix
