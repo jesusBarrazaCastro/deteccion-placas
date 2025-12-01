@@ -39,7 +39,7 @@ El proyecto se basa en una arquitectura contenerizada para asegurar la portabili
 ├── 📁 docs                   # Documentación adicional, como manuales y guías
 |   ├── 📄 Documentacion_tecnica_deteccion_placas.pdf # Documento de la documentación técnica (archivo actual)
 |   └── 📄 manual_de_usuario.pdf # Manual de usuario para el manejo de la aplicación (¡NUEVO!)
-└── 📁 database_scripts       # Scripts SQL o de migración para la base de datos
+└── 📁 database_scripts       # Scripts SQL de los procedimientos almacenados
 ```
 
 ## 📱 Descarga del Instalador Android 🚀
