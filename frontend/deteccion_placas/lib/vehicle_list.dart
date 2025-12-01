@@ -84,6 +84,7 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
                       child: Icon(Icons.badge, color: Theme.of(context).primaryColor),
                     ),
                     title: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
                           vehicle['placa'] ?? 'N/A',
@@ -107,7 +108,6 @@ class _VehiclesListScreenState extends State<VehiclesListScreen> {
                         ),
                       ],
                     ),
-                    trailing: Icon(Icons.chevron_right, color: Theme.of(context).primaryColor),
                     // Usamos widget.onVehicleTap
                     onTap: () => widget.onVehicleTap(vehicle),
                   ),

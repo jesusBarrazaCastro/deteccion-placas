@@ -21,7 +21,6 @@
         android:label="deteccion_placas"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-
         android:networkSecurityConfig="@xml/network_security_config">
 
         <activity
@@ -51,4 +50,26 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+
+    <!-- Bloque CRÍTICO: Permite consultar si hay aplicaciones que manejen esquemas específicos.
+         Necesario para canLaunchUrl en Android 11+ (API 30+). -->
+    <queries>
+        <!-- 1. Permite consultar si hay navegadores que puedan manejar HTTPS -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+
+        <!-- 2. Permite consultar si hay apps de mapas (esquema geo:) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+
+        <!-- 3. Permite consultar específicamente por el dominio de Google Maps -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" android:host="maps.google.com" />
+        </intent>
+    </queries>
 </manifest>
