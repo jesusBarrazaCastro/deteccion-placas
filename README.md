@@ -48,7 +48,7 @@ El proyecto se basa en una arquitectura contenerizada para asegurar la portabili
 ## 💡 Manual de Usuario y Demostración
 
 ### 🎬 Video Demostración
-Vea cómo funciona el sistema de detección y gestión en acción:
+Vea cómo funciona el sistema de detección y gestión en acción **realizando dos casos de prueba distintos**, uno utilizando la **integración con la cámara** para escanear la placa y otro **seleccionando la imagen desde la galería**:
 
 [![Mira nuestro video en YouTube](https://img.youtube.com/vi/7U5_wkJ_-wg/0.jpg)](https://www.youtube.com/watch?v=7U5_wkJ_-wg)
 
