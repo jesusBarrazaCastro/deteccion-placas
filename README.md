@@ -105,6 +105,9 @@ La aplicación fue diseñada con una arquitectura moderna y modular, separando c
 ### 2. Esquema de la Base de Datos (PostgreSQL)
 El sistema utiliza **PostgreSQL** como motor de base de datos relacional. El diseño se centra en cuatro entidades principales: `persona`, `vehiculo`, `scan_log` (Registro de Escaneos) e `incidencia`.
 
+![WhatsApp Image 2025-11-30 at 00 14 48](https://github.com/user-attachments/assets/f4a92ef8-9948-47c1-b634-ce4b2e3836ef)
+
+
 #### **Lógica de Negocio y Procedimientos Almacenados**
 El sistema utiliza funciones y procedimientos almacenados (PL/pgSQL) directamente en la base de datos. El procedimiento `read_vehiculos` permite la **búsqueda inteligente de Vehículo por Placa** (`AC = 'by_id'`) para compensar errores de reconocimiento de placa utilizando múltiples niveles de coincidencia.
 
