@@ -98,7 +98,7 @@ La aplicación fue diseñada con una arquitectura moderna y modular, separando c
 
 #### **Diagrama de Arquitectura:**
 
-![Screenshot 2024-11-30 at 18 41 38]([https://github.com/user-attachments/assets/b24072ba-5177-4c25-bb69-52fee47a7e2a](https://private-user-images.githubusercontent.com/159227511/520571424-8c1611f2-cf49-41be-bb23-a9725ec2397a.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NjQ1NTg3MjcsIm5iZiI6MTc2NDU1ODQyNywicGF0aCI6Ii8xNTkyMjc1MTEvNTIwNTcxNDI0LThjMTYxMWYyLWNmNDktNDFiZS1iYjIzLWE5NzI1ZWMyMzk3YS5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUxMjAxJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MTIwMVQwMzA3MDdaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT01ZDA0ZjgyYmE3YTJlOWE2MDIzMWYxOWI0NDI3MTA3MDQ2MWJjNWJkNDFkMmY0YTc2MzMyNzRkMTM2MDhlZmM5JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.mj4DSSvPahpJuewKv8zDCGGwhkypQb5SSX-6K9mui7g)) 
+<img width="1000" height="1000" alt="Arquitectura de la aplicación" src="https://github.com/user-attachments/assets/6f7ef14e-769b-46dc-a5eb-1199e6031b07" />
 
 
 ### 2. Esquema de la Base de Datos (PostgreSQL)
