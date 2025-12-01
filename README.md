@@ -151,8 +151,10 @@ La interfaz de comunicación entre el Frontend (Flutter) y el Backend (Python co
 ### **Ejemplos de uso de endpoints en Frontend**
 
 **Endpoint de registro de incidencia en el backend**
+
 <img width="856" height="279" alt="Screenshot 2025-11-30 at 23 33 29" src="https://github.com/user-attachments/assets/6f1f5946-b89c-4be9-a26f-6edcebed8808" />
 
 **Ejemplo de uso en el frontend**
+
 <img width="699" height="494" alt="Screenshot 2025-11-30 at 23 35 03" src="https://github.com/user-attachments/assets/5ff99efa-982f-404d-b1b3-c1e9e980d756" />
 
